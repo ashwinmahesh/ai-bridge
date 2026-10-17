@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "ai_bridge": {
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "args": [
+        "/Users/ashwinmahesh/Documents/ai-bridge/bridge.py",
+        "--project",
+        "ai-bridge",
+        "mcp",
+        "--identity",
+        "gemini"
+      ]
+    }
+  }
+}

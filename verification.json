@@ -1,0 +1,48 @@
+{
+  "implementation": "Python standard library + SQLite",
+  "project_directory": "/Users/ashwinmahesh/Documents/ai-bridge",
+  "project": "ai-bridge",
+  "automated_tests": 23,
+  "automated_result": "passed",
+  "live_e2e": {
+    "passed": true,
+    "results": [
+      {
+        "agent": "claude",
+        "message_id": "e09586cb-4545-453f-9c92-595b74193261",
+        "conversation_id": "915a1835-3678-47d5-beb0-3f796fda7b2d",
+        "state": "done",
+        "exit_code": 0,
+        "provider_duration_ms": 17060,
+        "response_bytes": 26
+      },
+      {
+        "agent": "gemini",
+        "message_id": "124588e1-da51-46df-8822-7db8d21c14e6",
+        "conversation_id": "e3189d03-b77b-4654-82dc-5bb204c8cbe8",
+        "state": "done",
+        "exit_code": 0,
+        "provider_duration_ms": 10608,
+        "response_bytes": 26
+      }
+    ],
+    "reply_markers": [
+      "GEMINI_E2E_OK_bd404e1e6171",
+      "CLAUDE_E2E_OK_bd404e1e6171"
+    ]
+  },
+  "skill": "~/.codex/skills/ai-bridge",
+  "skill_validation": "passed",
+  "live_context_e2e": {
+    "passed": true,
+    "separate_conversations_same_project": true,
+    "gemini_reply": "GEMINI_CONTEXT_OK_9ec4b01adff9",
+    "claude_reply": "CLAUDE_CONTEXT_OK_9ec4b01adff9",
+    "context_file": "e2e/9ec4b01adff9/findings.md",
+    "final_version": 2,
+    "final_writer": "claude",
+    "gemini_message_id": "fe469366-2057-4187-be3f-87d28b8ea6d0",
+    "claude_message_id": "6beb3dbb-f57e-4a26-ab50-a61cfe9bea28"
+  },
+  "service_mode": "background"
+}

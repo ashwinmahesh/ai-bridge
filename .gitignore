@@ -1,0 +1,4 @@
+.bridge/
+__pycache__/
+*.pyc
+local.ai-bridge.plist

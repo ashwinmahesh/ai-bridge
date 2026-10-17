@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Bridge"
+  short_description: "Ask Gemini and Claude through local CLI messaging"
+  default_prompt: "Use $ai-bridge to ask Gemini and Claude for their perspectives and retrieve their replies."
