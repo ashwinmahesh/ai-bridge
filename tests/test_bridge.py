@@ -285,7 +285,7 @@ print(json.dumps(reply))
         result = subprocess.run([sys.executable, bridge.__file__, '--home', str(self.home), 'mcp', '--identity', 'gemini'], input=payload, text=True, capture_output=True, timeout=10)
         replies = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertEqual(len(replies), 4)
-        self.assertEqual(len(replies[1]['result']['tools']), 7)
+        self.assertEqual(len(replies[1]['result']['tools']), 8)
         self.assertEqual(len(json.loads(replies[2]['result']['content'][0]['text'])), 3)
         self.assertFalse(replies[3]['result'].get('isError', False))
         rows = bridge.request(self.home, self.cfg, '/messages')
@@ -297,6 +297,8 @@ print(json.dumps(reply))
             bridge.request(self.home, self.cfg, '/messages', {'to':'claude','body':'again','conversation':queued['conversation']})
 
     def test_context_api_and_mcp(self):
+        scaffold = bridge.request(self.home, self.cfg, '/context/scaffold', {'task_id':'123','writer':'chatgpt'})
+        self.assertEqual(len(scaffold['created']), 4)
         record = bridge.request(self.home, self.cfg, '/context/file', {'path':'brief.md','content':'context content','expected_version':0,'writer':'chatgpt'})
         self.assertEqual(record['version'], 1)
         with self.assertRaisesRegex(ValueError, 'context_conflict'):

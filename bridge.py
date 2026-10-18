@@ -466,6 +466,11 @@ class Worker:
                     'tell it which agent should receive its answer. Your reply is recorded for the user; '
                     'it is not automatically delivered to other agents. Do not use MCP to route messages '
                     'from this managed turn; use the JSON envelope only.\n'
+                    'Standard context layout: project/brief.md holds goals, scope, and constraints; '
+                    'project/decisions.md records accepted decisions and rationale; '
+                    'tasks/<task-id>/requirements.md holds the task objective and acceptance criteria; '
+                    'tasks/<task-id>/findings.md records evidence, agent attribution, and unresolved questions. '
+                    'These are conventions; custom context paths are supported. '
                     'The Selected context files JSON below contains the only shared context documents selected for this turn. '
                     'You may update these files by adding context_updates to your JSON response, e.g. '
                     '{"reply":"...","messages":[],"context_updates":[{"path":"notes.md","expected_version":1,"content":"full replacement text"}]}. '
@@ -560,6 +565,8 @@ def serve(home, cfg):
                     require(isinstance(body, dict), 'Expected JSON object')
                     if url.path == '/messages':
                         data = store.enqueue(body.get('sender', 'user'), body.get('to'), body.get('body'), body.get('conversation'), context_files=body.get('context_files'))
+                    elif url.path == '/context/scaffold':
+                        data = store.context.scaffold(body.get('task_id'), body.get('writer', 'user'))
                     elif url.path == '/context/file':
                         data = store.context.write(body.get('path'), body.get('content'), body.get('expected_version'), body.get('writer', 'user'))
                     elif url.path == '/stop':
@@ -636,6 +643,8 @@ TOOLS = [
 
 
 TOOLS.extend([
+    {'name': 'bridge_context_scaffold', 'description': 'Create standard project context documents and optional task requirements/findings. Existing content and versions are preserved.',
+     'inputSchema': {'type': 'object', 'properties': {'task_id': {'type': 'string'}}, 'additionalProperties': False}},
     {'name': 'bridge_context_list', 'description': 'List persistent shared context files in this project with their current versions.',
      'inputSchema': {'type': 'object', 'properties': {}, 'additionalProperties': False}},
     {'name': 'bridge_context_read', 'description': 'Read a project context file, optionally a historical version. Missing files return version 0.',
@@ -670,6 +679,8 @@ def mcp(home, cfg, identity):
                         value = request(home, cfg, '/messages', {'sender': identity, 'to': args['to'], 'body': args['body'], 'conversation': args.get('conversation'), 'context_files': args.get('context_files')})
                     elif name == 'bridge_messages':
                         value = request(home, cfg, '/messages?' + urllib.parse.urlencode(args))
+                    elif name == 'bridge_context_scaffold':
+                        value = request(home, cfg, '/context/scaffold', {**args, 'writer': identity})
                     elif name == 'bridge_context_list':
                         value = request(home, cfg, '/context')
                     elif name == 'bridge_context_read':
@@ -736,6 +747,9 @@ def main():
     context = sub.add_parser('context', help='Read/write persistent project context documents')
     context_sub = context.add_subparsers(dest='context_action', required=True)
     context_sub.add_parser('list')
+    scaffold = context_sub.add_parser('scaffold', help='Create standard project/task documents without overwriting content')
+    scaffold.add_argument('--task', dest='task_id')
+    scaffold.add_argument('--writer', choices=(*AGENTS, 'user'), default='user')
     context_read = context_sub.add_parser('read')
     context_read.add_argument('path')
     context_read.add_argument('--version', type=int)
@@ -786,6 +800,8 @@ def main():
     elif args.action == 'context':
         if args.context_action == 'list':
             result = request(home, cfg, '/context')
+        elif args.context_action == 'scaffold':
+            result = request(home, cfg, '/context/scaffold', {'task_id': args.task_id, 'writer': args.writer})
         elif args.context_action == 'read':
             query = {'path': args.path}
             if args.version is not None:

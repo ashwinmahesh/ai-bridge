@@ -10,7 +10,7 @@ Use this procedure when an AI agent is asked to use the bridge:
 
 1. Work from `~/Documents/ai-bridge`. No build or package installation is required. Verify Python with `python3 --version`.
 2. Select one project name. Use exactly the same project name for startup, sends, reads, and cancellation. The default is `ai-bridge`.
-3. Check `python3 manage.py --project NAME status`. If it reports `Not running`, start with `python3 bridge.py --background --project NAME --folder /absolute/workspace`. Background startup never asks questions.
+3. Check `python3 manage.py --project NAME status`. Respect the user's lifecycle preference: if they said they will run the daemon themselves or asked to leave it stopped, do not start it. Otherwise, when startup is within the requested task and it reports `Not running`, start with `python3 bridge.py --background --project NAME --folder /absolute/workspace`. Background startup never asks questions.
 4. Send a message using the CLI or MCP tools below. Save the returned message ID and conversation ID.
 5. Read messages for that conversation. A queued response is not a completed response. Poll at reasonable intervals, such as 2 seconds, until the target message has state `done`, `failed`, or `cancelled`.
 6. Read the `result` of a completed message. If the response routed more messages, inspect those messages too. A conversation is idle when it has no `queued` or `running` messages. Use the `seq` cursor if more than 200 messages are present.
@@ -36,13 +36,41 @@ Then read the conversation:
 python3 bridge.py --project my-app messages --conversation CONVERSATION_ID
 ```
 
-All global flags go **before the command**. Command flags go **before positional arguments**:
+Follow this argument order in agent-generated commands: global flags **before the command**, then command-specific flags, then positional arguments:
 
 ```sh
 python3 bridge.py --project my-app send --conversation CONVERSATION_ID --sender chatgpt claude 'Review the recommendation in this conversation.'
 ```
 
-Do not place `--project` after `send`, or `--conversation` after the message body. Quote the message as a single argument. Prompts are passed to the provider through stdin without shell interpolation.
+Keep `--project` before `send` and use the command-specific flag order shown above. Quote the message as a single argument. Prompts are passed to the provider through stdin without shell interpolation.
+
+## Complete shared-context workflow for an orchestrator
+
+Use this sequence when a task needs durable context. `my-app` and `123` are example identifiers; reuse the user's project and actual task ID. Commands assume the daemon is already running. If it is stopped and the user manages startup, report that and wait for them to start it.
+
+1. Create missing templates with `context scaffold`. It does not fill in the task's actual requirements or attach files to messages.
+2. Read the brief and task requirements. Populate them from the user's request using their **current returned versions**. Do not invent goals or constraints.
+3. Select the minimum useful input documents and an output document with repeated `--context`. Include the output path even when it is new, because downstream writes are limited to selected files.
+4. Send the request. Save both JSON fields: `id` identifies this delivery; `conversation` identifies its transcript.
+5. Read that conversation at reasonable intervals until the target message is terminal (`done`, `failed`, or `cancelled`). Use a bounded wait appropriate to the requested task; if it expires, report the last state instead of resending. Check routed child messages too if present.
+6. For a completed message, read `result`, then separately read the findings document. Confirm its content, version, and writer; a conversational reply alone does not prove a context write occurred.
+7. For another downstream agent, select the updated findings document explicitly. A new direct `send` does not inherit attachments automatically; only agent-routed messages inherit them.
+8. If a context write conflicts, compare the current document with the failed message's `context_proposals`, reconcile deliberately, and write against the current version. Do not retry the model call or overwrite newer context blindly.
+
+Example commands:
+
+```sh
+python3 bridge.py --project my-app context scaffold --task 123 --writer chatgpt
+python3 bridge.py --project my-app context read project/brief.md
+python3 bridge.py --project my-app context read tasks/123/requirements.md
+# Populate the templates using context write and the versions returned above.
+python3 bridge.py --project my-app send --sender chatgpt --context project/brief.md --context tasks/123/requirements.md --context tasks/123/findings.md gemini 'Review the requirements. Save evidence and open questions in the selected findings file. Return messages: [] when finished.'
+# Substitute the conversation field returned by send:
+python3 bridge.py --project my-app messages --conversation CONVERSATION_ID
+python3 bridge.py --project my-app context read tasks/123/findings.md
+```
+
+For a new scaffold, files start at version 1. For an existing project or task, their versions may be higher. Context writes replace the **entire document**, so preserve material that remains relevant when merging findings or decisions.
 
 ## Startup modes
 
@@ -117,7 +145,7 @@ The port is saved in that profile. Stop a running profile before changing its po
 
 ## Persistent project context
 
-Each project has a versioned context store shared by the orchestrator and downstream agents. Suggested logical structure:
+Each project has a versioned context store shared by the orchestrator and downstream agents. The standard layout is created by the scaffold command:
 
 ```text
 context/
@@ -127,13 +155,41 @@ context/
   tasks/TASK/findings.md    # downstream findings / handoff
 ```
 
-SQLite holds the authoritative content and immutable revisions. Readable mirrors live under the selected profile's `context/` directory. The orchestrator chooses documents **per message**; documents are not attached automatically just because they belong to the same project.
-
-Create/read context through the CLI while the daemon is running:
+Create the standard project documents and a task's documents explicitly:
 
 ```sh
-python3 bridge.py --project my-app context write project/brief.md --text 'Goals and constraints' --expected-version 0 --writer chatgpt
-python3 bridge.py --project my-app context write tasks/123/requirements.md --file /path/to/requirements.md --expected-version 0
+python3 bridge.py --project my-app context scaffold --task 123 --writer chatgpt
+```
+
+Use the actual task identifier in place of `123`. Omit `--task` to create only `project/brief.md` and `project/decisions.md`. The command creates missing documents with editable templates; it preserves existing content and versions. Repeating it is safe. No documents are automatically attached to messages. The equivalent MCP tool is `bridge_context_scaffold` with optional `task_id`.
+
+The README, installed skill, and each managed agent's runtime prompt explain the role of these paths. They are a supported convention, not a restriction: custom document paths remain valid.
+
+Find the exact location without starting the daemon:
+
+```sh
+python3 bridge.py --project my-app init
+```
+
+The JSON response's `home` is that profile's state directory; the readable files are at `<home>/context/`, and the database is `<home>/messages.sqlite3`. With the default installation, the shape is:
+
+```text
+~/Documents/ai-bridge/.bridge/projects/<name>-<hash>/context/
+  project/brief.md
+  project/decisions.md
+  tasks/<task-id>/requirements.md
+  tasks/<task-id>/findings.md
+```
+
+`--context project/brief.md` is a document name relative to this context store. It is not an arbitrary path in the code workspace, and it is not a path relative to the terminal's current directory. `--folder` selects the providers' code workspace; it does not relocate this private store. Use `context write NAME --file /absolute/source.md` to import a workspace file.
+
+SQLite holds the authoritative content and immutable revisions. Readable mirrors live under the selected profile's `context/` directory. The orchestrator chooses documents **per message**; documents are not attached automatically just because they belong to the same project.
+
+After a new scaffold, each document starts at version 1. The examples below use that initial version; for an existing document, read and use its current version instead. Read/write through the CLI while the daemon is running:
+
+```sh
+python3 bridge.py --project my-app context write project/brief.md --text 'Goals and constraints' --expected-version 1 --writer chatgpt
+python3 bridge.py --project my-app context write tasks/123/requirements.md --file /path/to/requirements.md --expected-version 1
 python3 bridge.py --project my-app context list
 python3 bridge.py --project my-app context read project/brief.md
 python3 bridge.py --project my-app context read project/brief.md --version 1
@@ -156,7 +212,7 @@ Downstream agents write back through the response envelope:
   "reply": "I recorded my findings.",
   "messages": [{"to": "claude", "body": "Review the findings."}],
   "context_updates": [
-    {"path": "tasks/123/findings.md", "expected_version": 0, "content": "Full findings text"}
+    {"path": "tasks/123/findings.md", "expected_version": 1, "content": "Full findings text"}
   ]
 }
 ```
@@ -242,6 +298,7 @@ Start the daemon first. The stdio MCP process is a client of that daemon and doe
 | `bridge_messages` | optional `conversation`, `after` | Up to 200 transcript rows and states |
 | `bridge_status` | none | Daemon health, project, and executable availability |
 | `bridge_stop` | `conversation` | Cancel queued work and further routing |
+| `bridge_context_scaffold` | optional `task_id` | Create standard project/task documents without overwriting |
 | `bridge_context_list` | none | List project context paths and versions |
 | `bridge_context_read` | `path`, optional `version` | Read current or historical context |
 | `bridge_context_write` | `path`, `content`, optional `expected_version` | Create/update persistent project context |
@@ -357,6 +414,7 @@ All endpoints require `Authorization: Bearer TOKEN`, read from the selected prof
 
 | Method | Path | Body / response |
 | --- | --- | --- |
+| POST | `/context/scaffold` | `{ "task_id":"123", "writer":"chatgpt" }`; task ID optional |
 | GET | `/context` | List context paths and versions |
 | GET | `/context/file?path=NAME&version=N` | Read a context document (version optional) |
 | POST | `/context/file` | `{ "path":"notes.md", "content":"...", "expected_version":1, "writer":"chatgpt" }` |

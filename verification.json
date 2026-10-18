@@ -44,5 +44,12 @@
     "gemini_message_id": "fe469366-2057-4187-be3f-87d28b8ea6d0",
     "claude_message_id": "6beb3dbb-f57e-4a26-ab50-a61cfe9bea28"
   },
-  "service_mode": "background"
+  "service_mode": "stopped at user request",
+  "scaffold": {
+    "implemented": true,
+    "preserves_existing_documents": true,
+    "targeted_context_tests": 8,
+    "result": "passed"
+  },
+  "automated_tests_note": "23 full-suite tests passed before scaffold addition; eight context tests rerun after scaffold addition."
 }

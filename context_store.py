@@ -2,6 +2,7 @@
 import fcntl
 import json
 import os
+import re
 import sqlite3
 from pathlib import PurePosixPath
 import tempfile
@@ -138,6 +139,36 @@ class ContextStore:
             changed = self.apply(db, [{'path': path, 'content': content, 'expected_version': expected_version}], writer)
         self.publish(changed)
         return changed[0]
+
+    def scaffold(self, task_id=None, writer='user'):
+        """Create the standard layout atomically; preserve existing versions/content."""
+        if writer not in ('user', 'chatgpt', 'gemini', 'claude'):
+            raise ValueError('Invalid context writer')
+        if task_id is not None and (not isinstance(task_id, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}', task_id)):
+            raise ValueError('Task ID must contain 1–64 letters, digits, underscores, or hyphens')
+        templates = {
+            'project/brief.md': '# Project brief\n\n## Goal\nNot recorded yet.\n\n## Scope\nNot recorded yet.\n\n## Constraints\nNot recorded yet.\n',
+            'project/decisions.md': '# Project decisions\n\nRecord accepted decisions with rationale and source. Keep proposals separate from accepted decisions.\n\nNo decisions recorded yet.\n',
+        }
+        if task_id is not None:
+            templates.update({
+                f'tasks/{task_id}/requirements.md': f'# Task {task_id}: requirements\n\n## Objective\nNot recorded yet.\n\n## Acceptance criteria\nNot recorded yet.\n\n## Constraints and context sources\nNot recorded yet.\n',
+                f'tasks/{task_id}/findings.md': f'# Task {task_id}: findings\n\nRecord verified findings, evidence, agent attribution, and unresolved questions.\n\nNo findings recorded yet.\n',
+            })
+        with self.store.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            updates, existing = [], []
+            for path, content in templates.items():
+                current = self._read(db, path)
+                if current['exists']:
+                    existing.append({'path': path, 'version': current['version']})
+                else:
+                    updates.append({'path': path, 'content': content, 'expected_version': 0})
+            changed = self.apply(db, updates, writer)
+        self.publish(changed)
+        self.store.log.emit('context_scaffolded', task_id=task_id, created=[item['path'] for item in changed], existing=[item['path'] for item in existing], writer=writer)
+        return {'created': [{'path': item['path'], 'version': item['version']} for item in changed],
+                'existing': existing, 'context_files': list(templates)}
 
     def physical_path(self, path):
         context_path(path)

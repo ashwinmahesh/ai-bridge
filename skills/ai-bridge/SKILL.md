@@ -18,7 +18,7 @@ python3 manage.py --project PROJECT status
 python3 bridge.py --background --project PROJECT
 ```
 
-The second command starts the daemon if needed and is idempotent. To bind a new project to a specific workspace, add `--folder /absolute/path` at startup. Missing folders and Antigravity native projects are created automatically. Codex and Claude Code group sessions by that workspace. These are local CLI groups, not browser-chat Projects.
+The second command starts the daemon if needed and is idempotent. If the user asked to leave it stopped or said they will manage startup themselves, check status but do not run the start command; report that a running daemon is required. To bind a new project to a specific workspace, add `--folder /absolute/path` at startup. Missing folders and Antigravity native projects are created automatically. Codex and Claude Code group sessions by that workspace. These are local CLI groups, not browser-chat Projects.
 
 Send only the content and request authorized by the user:
 
@@ -35,7 +35,7 @@ Valid recipients: `chatgpt`, `gemini`, `claude`. The Gemini recipient uses `agy`
 python3 bridge.py --project PROJECT messages --conversation CONVERSATION_ID
 ```
 
-Poll at reasonable intervals (for example 2 seconds) until the target message is `done`, `failed`, or `cancelled`. A queued/running message is not a reply. Read `result` for a completed reply and `error` for a failure or blocked route. If more messages were routed, inspect their states too. Use `--after SEQ` to paginate beyond 200 rows. Do not automatically resend a failed/interrupted request: the provider may have consumed usage already.
+Use a bounded wait appropriate to the task, polling at reasonable intervals (for example 2 seconds) until the target message is `done`, `failed`, or `cancelled`. If the wait budget expires, report the last state without resending. A queued/running message is not a reply. Read `result` for a completed reply and `error` for a failure or blocked route. If more messages were routed, inspect their states too. Use `--after SEQ` to paginate beyond 200 rows. Do not automatically resend a failed/interrupted request: the provider may have consumed usage already.
 
 For another message in the same shared context:
 
@@ -47,21 +47,25 @@ Global flags precede the command. Command flags can precede positional arguments
 
 ## Persisted project context
 
-Use named context documents for durable knowledge shared across conversations in the same project. The orchestrator chooses the files attached to each message:
+Use named context documents for durable knowledge shared across conversations in the same project. Initialize the conventional documents for the actual task, then choose which files to attach. Run `python3 bridge.py --project PROJECT context scaffold --task TASK_ID --writer chatgpt` (or MCP `bridge_context_scaffold` with `task_id`). Omit `--task` for project documents only. Scaffolding creates missing templates and never overwrites existing content or versions. Replace TASK_ID with the real task identifier; `123` in examples is not a universal default.
+
+Use `project/brief.md` for goals/scope/constraints, `project/decisions.md` for accepted decisions and rationale, `tasks/TASK_ID/requirements.md` for objectives/acceptance criteria, and `tasks/TASK_ID/findings.md` for evidence, agent attribution, and unresolved questions. Custom paths are supported.
+
+The orchestrator chooses the files attached to each message:
 
 ```sh
-python3 bridge.py --project PROJECT context write project/brief.md --text 'Goals and constraints' --expected-version 0 --writer chatgpt
 python3 bridge.py --project PROJECT context read project/brief.md
-python3 bridge.py --project PROJECT send --sender chatgpt --context project/brief.md --context tasks/TASK/findings.md gemini 'Review the brief and write findings into the selected findings file.'
+python3 bridge.py --project PROJECT context write project/brief.md --text 'Goals and constraints' --expected-version 1 --writer chatgpt
+python3 bridge.py --project PROJECT send --sender chatgpt --context project/brief.md --context tasks/TASK_ID/findings.md gemini 'Review the brief and write findings into the selected findings file.'
 ```
 
-Repeat `--context` for each selected file. No files are attached by default. Missing files have version 0 and can be selected as output destinations. Use paths such as `project/brief.md`, `project/decisions.md`, `tasks/TASK/requirements.md`, and `tasks/TASK/findings.md`.
+Version 1 in the example assumes a newly scaffolded file. For an existing document, read and use its current version. Repeat `--context` for each selected file. No files are attached by default. Missing files have version 0 and can be selected as output destinations. Use paths such as `project/brief.md`, `project/decisions.md`, `tasks/TASK_ID/requirements.md`, and `tasks/TASK_ID/findings.md`.
 
-Recipients receive only the selected context snapshots, with version numbers. They can return `context_updates: [{"path":"tasks/TASK/findings.md","expected_version":0,"content":"full document text"}]` in their response envelope. Updates must target selected files and cite the delivered version. Routed messages inherit the selection, or can pass a subset using their own `context_files` field. Context updates and routed messages commit atomically.
+Recipients receive only the selected context snapshots, with version numbers. They can return `context_updates: [{"path":"tasks/TASK_ID/findings.md","expected_version":1,"content":"full document text"}]` in their response envelope. Updates must target selected files and cite the delivered version. Routed messages inherit the selection, or can pass a subset using their own `context_files` field. Context updates and routed messages commit atomically.
 
 Read the persisted result with `context read PATH`; historical versions use `--version N`. The MCP equivalents are `bridge_context_list`, `bridge_context_read`, and `bridge_context_write`; `bridge_send` accepts a `context_files` array.
 
-On a conflict, read the current version and the failed message's `context_proposals` before reconciling; do not overwrite blindly. The SQLite store is authoritative; readable file mirrors are in the profile's `context/` directory. Use CLI/MCP writes instead of directly editing those mirrors. Read the README's persistent-context section for limits and detailed semantics.
+On a conflict, read the current version and the failed message's `context_proposals` before reconciling; do not overwrite blindly. The SQLite store is authoritative; readable file mirrors are in the profile's `context/` directory. Find the exact profile directory with `python3 bridge.py --project PROJECT init` and append `/context/` to its returned `home`. `--context` names are relative to that store, not paths in the provider workspace. Include an output document in the selection if the downstream agent should write it. After completion, read that document and check its version/writer instead of relying only on the reply. A later direct send must select attachments again; it does not inherit them automatically. Use CLI/MCP writes instead of directly editing those mirrors. Read the README's persistent-context section for limits and detailed semantics.
 
 ## Routing and MCP
 

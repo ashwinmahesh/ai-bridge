@@ -38,6 +38,24 @@ class ContextTests(unittest.TestCase):
             worker.stopping.set()
             thread.join(timeout=3)
 
+    def test_standard_scaffold_preserves_existing_context(self):
+        first = self.store.context.scaffold('123', 'chatgpt')
+        expected = ['project/brief.md', 'project/decisions.md', 'tasks/123/requirements.md', 'tasks/123/findings.md']
+        self.assertEqual(first['context_files'], expected)
+        self.assertEqual(len(first['created']), 4)
+        self.store.context.write('project/brief.md', 'Actual user goals', 1, 'chatgpt')
+        second = self.store.context.scaffold('123', 'gemini')
+        self.assertEqual(second['created'], [])
+        self.assertEqual(len(second['existing']), 4)
+        self.assertEqual(self.store.context.read('project/brief.md')['content'], 'Actual user goals')
+        self.assertEqual(self.store.context.read('project/brief.md')['version'], 2)
+        for path in expected:
+            self.assertTrue((self.home / 'context' / path).is_file())
+        another = self.store.context.scaffold('124')
+        self.assertEqual(len(another['created']), 2)
+        with self.assertRaises(ValueError):
+            self.store.context.scaffold('../unsafe')
+
     def test_versions_mirrors_and_restart(self):
         self.assertEqual(self.store.context.read('brief.md')['version'], 0)
         first = self.store.context.write('brief.md', 'one', 0, 'chatgpt')
