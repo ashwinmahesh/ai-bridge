@@ -17,6 +17,24 @@ Download/extract the macOS artifact matching your architecture from CI, or build
 
 The installer copies the executable to `~/Library/Application Support/AI Bridge/bin/ai-bridge`, initializes private state there, and writes `~/Library/LaunchAgents/local.ai-bridge.api.plist`. It runs as the signed-in user at login, including after reboot and login. It does not run as root before login. Authentication belongs to that user's CLI accounts. No source checkout or Python installation is needed after installation.
 
+From a source checkout, build and install with:
+
+```bash
+make build
+make install-service
+```
+
+`make install-service` installs for the next login without starting the service immediately. Its JSON output includes `"started": false` for that successful install-only result. There is no `make install` target.
+
+To start an already-installed service now, load its login configuration:
+
+```bash
+launchctl bootstrap "gui/$(id -u)" \
+  "$HOME/Library/LaunchAgents/local.ai-bridge.api.plist"
+```
+
+Before loading it, ensure another bridge process is not using the configured port (8765 by default). If you installed with a different port, use that port for API requests. Run bootstrap only when the job is not already loaded; it does not restart an existing job.
+
 Default port: 8765. For a different port/home: `./ai-bridge --home /absolute/state --port 8766 install-service --start`. Installation does not silently unload or replace a running job; for upgrades, cleanly shut down via API, run `launchctl bootout gui/$(id -u)/local.ai-bridge.api`, install the replacement, then bootstrap it again. The installer preserves data, configuration, transcripts and token. `--start` on an already loaded job fails visibly; it does not restart it.
 
 ```bash
