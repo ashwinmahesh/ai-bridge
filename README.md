@@ -4,6 +4,14 @@ Distribute one executable, run it at login, and control projects, messages, prov
 
 Read [API.md](API.md) for the complete v2 API contract and agent workflow. Read [SKILL.md](SKILL.md) for concise instructions an AI agent can use directly. The older per-project Python CLI remains supported and is documented below.
 
+## What another user needs
+
+Download the binary archive for their Mac's architecture, extract it, and run `./ai-bridge install-service --start`. They do not need your checkout, Python installation, account, home directory, or configuration. Before creating a project, they must install and sign into the three provider CLIs (`codex`, `agy`, `claude`) under their own account. The installer detects their executable paths; provider settings can be corrected through the API if a CLI was installed later or moved. Use their own subscriptions and verify the native CLI authentication mode.
+
+State and credentials are created locally for each user. The packaged archive includes only the binary, documentation and skill, never `.bridge`, provider credentials, tokens, transcripts or the developer's detected executable paths. The default service home follows the current user and OS; `--home` and `--port` can override it. Source Makefile service targets use the same OS-specific default.
+
+Current distribution limits: macOS login startup only; a native build is needed for each architecture; Windows is unsupported. Downloaded macOS builds are not Developer ID signed or notarized, so frictionless public installation still requires maintainer signing/notarization. The repository's legacy stdio MCP files are explicitly editable templates, not personal configuration. The binary uses HTTP MCP and does not depend on those Python templates.
+
 ## Install a binary on macOS
 
 Download/extract the macOS artifact matching your architecture from CI, or build it below. The local build has been tested on Apple Silicon; binaries must be built for each target platform/architecture. This release implements macOS login installation and macOS/Linux foreground service code; Windows is not supported (POSIX locking/process groups).
@@ -106,7 +114,7 @@ The implementation uses Python 3.11+ and its standard-library SQLite driver. The
 
 Use this procedure when an AI agent is asked to use the bridge:
 
-1. Work from `~/Documents/ai-bridge`. No build or package installation is required. Verify Python with `python3 --version`.
+1. Work from your checkout directory (replace `/absolute/path/to/ai-bridge` in examples with its actual location). No build or package installation is required. Verify Python with `python3 --version`.
 2. Select one project name. Use exactly the same project name for startup, sends, reads, and cancellation. The default is `ai-bridge`.
 3. Check `python3 manage.py --project NAME status`. Respect the user's lifecycle preference: if they said they will run the daemon themselves or asked to leave it stopped, do not start it. Otherwise, when startup is within the requested task and it reports `Not running`, start with `python3 bridge.py --background --project NAME --folder /absolute/workspace`. Background startup never asks questions.
 4. Send a message using the CLI or MCP tools below. Save the returned message ID and conversation ID.
@@ -117,7 +125,7 @@ Use this procedure when an AI agent is asked to use the bridge:
 Example:
 
 ```sh
-cd ~/Documents/ai-bridge
+cd /absolute/path/to/ai-bridge
 python3 bridge.py --background --project my-app --folder /absolute/path/to/my-app
 python3 bridge.py --project my-app send --sender chatgpt gemini 'Review this architecture and send your findings to chatgpt. Architecture: ...'
 ```
@@ -311,7 +319,7 @@ python3 bridge.py --project my-app init
 The JSON response's `home` is that profile's state directory; the readable files are at `<home>/context/`, and the database is `<home>/messages.sqlite3`. With the default installation, the shape is:
 
 ```text
-~/Documents/ai-bridge/.bridge/projects/<name>-<hash>/context/
+/absolute/path/to/ai-bridge/.bridge/projects/<name>-<hash>/context/
   project/brief.md
   project/decisions.md
   tasks/<task-id>/requirements.md
@@ -442,14 +450,14 @@ Start the daemon first. The stdio MCP process is a client of that daemon and doe
 
 The MCP client's `--identity` fixes its sender attribution. This identity is not inferred from text. For example, Codex's MCP configuration uses `chatgpt`.
 
-Ready-to-merge snippets in `mcp-configs/` target the installed path and default `ai-bridge` profile. Change their `--project` argument to select another project. Merge the server entry into existing settings rather than overwriting unrelated servers. Restart/reload the client if required.
+Legacy stdio templates in `mcp-configs/codex.toml`, `gemini.json`, and `claude.json` use `python3` and `/absolute/path/to/ai-bridge/bridge.py`. Replace the script placeholder with your checkout path; if the client cannot find `python3`, set its absolute interpreter path too. Change `--project` to select another project. Packaged installations should use the HTTP MCP setup in API.md instead. Merge the server entry into existing settings rather than overwriting unrelated servers. Restart/reload the client if required.
 
 Generic Codex configuration:
 
 ```toml
 [mcp_servers.ai_bridge]
 command = "/absolute/path/to/python3"
-args = ["/Users/YOU/Documents/ai-bridge/bridge.py", "--project", "ai-bridge", "mcp", "--identity", "chatgpt"]
+args = ["/absolute/path/to/ai-bridge/bridge.py", "--project", "ai-bridge", "mcp", "--identity", "chatgpt"]
 ```
 
 Antigravity (`~/.gemini/config/mcp_config.json` or workspace `.agents/mcp_config.json`):
@@ -459,7 +467,7 @@ Antigravity (`~/.gemini/config/mcp_config.json` or workspace `.agents/mcp_config
   "mcpServers": {
     "ai_bridge": {
       "command": "/absolute/path/to/python3",
-      "args": ["/Users/YOU/Documents/ai-bridge/bridge.py", "--project", "ai-bridge", "mcp", "--identity", "gemini"]
+      "args": ["/absolute/path/to/ai-bridge/bridge.py", "--project", "ai-bridge", "mcp", "--identity", "gemini"]
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "implementation": "Python standard library + SQLite",
-  "project_directory": "/Users/ashwinmahesh/Documents/ai-bridge",
+  "project_directory": "<local checkout>",
   "project": "ai-bridge",
   "automated_tests": 37,
   "automated_result": "passed (36 passed, 1 packaged-only test skipped in source suite)",

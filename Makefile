@@ -46,7 +46,7 @@ test:
 	$(PYTHON) -m unittest discover -s tests -v
 
 # Multi-project HTTP service. Legacy per-project targets above remain compatible.
-SERVICE_HOME ?= $(HOME)/Library/Application Support/AI Bridge
+SERVICE_HOME ?= $(shell $(PYTHON) -c 'from ai_bridge import default_home; print(default_home())')
 SERVICE_PORT ?= 8765
 BUILD_PYTHON ?= .venv-build/bin/python
 .PHONY: api build install-service
