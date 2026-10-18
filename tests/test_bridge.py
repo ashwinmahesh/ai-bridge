@@ -327,18 +327,21 @@ print(json.dumps(reply))
         return bridge.request(self.home, self.cfg, '/context/file?path=brief.md')
 
     def test_background_management(self):
+        import manage
+        # Allow the manager's bounded readiness deadline and cleanup to finish.
+        startup_timeout = manage.START_TIMEOUT + 15
         manager = str(Path(bridge.__file__).with_name('manage.py'))
         command = [sys.executable, manager, '--home', str(self.home)]
         self.proc.terminate()
         self.proc.communicate(timeout=10)
         try:
-            result = subprocess.run(command + ['start'], text=True, capture_output=True, timeout=15)
+            result = subprocess.run(command + ['start'], text=True, capture_output=True, timeout=startup_timeout)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('background', result.stdout)
-            again = subprocess.run(command + ['start'], text=True, capture_output=True, timeout=15)
+            again = subprocess.run(command + ['start'], text=True, capture_output=True, timeout=startup_timeout)
             self.assertEqual(again.returncode, 0, again.stderr)
             self.assertIn('Already running', again.stdout)
-            restarted = subprocess.run(command + ['restart'], text=True, capture_output=True, timeout=20)
+            restarted = subprocess.run(command + ['restart'], text=True, capture_output=True, timeout=startup_timeout + manage.STOP_TIMEOUT)
             self.assertEqual(restarted.returncode, 0, restarted.stderr)
             state = subprocess.run(command + ['status'], text=True, capture_output=True, timeout=10)
             self.assertEqual(state.returncode, 0, state.stderr)

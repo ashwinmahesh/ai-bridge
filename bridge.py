@@ -25,7 +25,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from local_http import LocalHTTPServer, local_opener
 from context_store import ContextStore, ContextConflict, context_paths
 from provider_options import validate_options, command_options
 
@@ -601,7 +602,7 @@ def serve(home, cfg, console_logs=True):
 
         do_GET = do_POST = handle_request
 
-    server = ThreadingHTTPServer(('127.0.0.1', cfg['port']), Handler)
+    server = LocalHTTPServer(('127.0.0.1', cfg['port']), Handler)
     pidfile = home / 'daemon.pid'
     pidfile.write_text(str(os.getpid()))
     log.emit('daemon_started', host='127.0.0.1', port=server.server_port, log_file=str(home / 'operations.jsonl'), console_logs=console_logs)
@@ -631,18 +632,18 @@ def serve(home, cfg, console_logs=True):
         lock.close()
 
 
-def request(home, cfg, path, data=None):
+def request(home, cfg, path, data=None, timeout=15):
     if path == '/messages' and data is not None and any(data.get(key) is not None for key in ('model', 'effort')):
-        health = request(home, cfg, '/health')
+        health = request(home, cfg, '/health', timeout=timeout)
         require(health.get('capabilities', {}).get('model_effort_selection'),
                 'Running daemon does not support model/effort selection. Restart it to load the updated code; no message was queued.')
     req = urllib.request.Request(f'http://127.0.0.1:{cfg["port"]}{path}',
                                  data=json.dumps(data).encode() if data is not None else None,
                                  headers={'Authorization': 'Bearer ' + (home / 'token').read_text().strip(), 'Content-Type': 'application/json'})
     # Never forward localhost tokens through an inherited HTTP proxy.
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    opener = local_opener()
     try:
-        with opener.open(req, timeout=15) as response:
+        with opener.open(req, timeout=timeout) as response:
             return json.load(response)
     except urllib.error.HTTPError as exc:
         with exc:

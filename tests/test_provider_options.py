@@ -113,7 +113,7 @@ class SelectionTests(unittest.TestCase):
             cfg = bridge.initialize(home)
             opener = mock.Mock()
             opener.open.return_value = io.BytesIO(b'{"ok":true}')
-            with mock.patch.object(bridge.urllib.request, 'build_opener', return_value=opener):
+            with mock.patch.object(bridge, 'local_opener', return_value=opener):
                 with self.assertRaisesRegex(ValueError, 'no message was queued'):
                     bridge.request(home, cfg, '/messages', {'to':'gemini','body':'review','model':'selected-model'})
             self.assertEqual(opener.open.call_count, 1)

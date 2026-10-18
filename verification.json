@@ -2,8 +2,8 @@
   "implementation": "Python standard library + SQLite",
   "project_directory": "<local checkout>",
   "project": "ai-bridge",
-  "automated_tests": 43,
-  "automated_result": "passed (42 passed, 1 packaged-only test skipped in source suite)",
+  "automated_tests": 46,
+  "automated_result": "passed (45 passed, 1 packaged-only test skipped in source suite)",
   "live_e2e": {
     "passed": true,
     "results": [
@@ -51,7 +51,7 @@
     "targeted_context_tests": 8,
     "result": "passed"
   },
-  "automated_tests_note": "Source regression suite and six actual Developer ID-signed binary tests passed. Six release-workflow tests use mocked Apple tools, never credentials.",
+  "automated_tests_note": "Source suite and six rebuilt standalone integration tests passed after removing DNS/TLS/proxy startup dependencies and bounding readiness polling.",
   "model_effort_selection": {
     "per_message": true,
     "mcp": true,
@@ -87,6 +87,16 @@
     "architecture": "arm64",
     "notarization": "pending Keychain profile setup",
     "stapled": false,
-    "binary_sha256": "f4639e62bad561ae76530f84c0fffe22a313580204560f2133df0af7ec1e1169"
+    "binary_sha256": "f4639e62bad561ae76530f84c0fffe22a313580204560f2133df0af7ec1e1169",
+    "source_note": "Signed artifact predates the startup fix; rebuild signed release before notarization."
+  },
+  "startup_regression": {
+    "reverse_dns_unavailable": "passed",
+    "https_trust_store_unavailable": "passed",
+    "proxy_discovery_unavailable": "passed",
+    "readiness_deadline_and_cleanup": "passed",
+    "packaged_tests": 6,
+    "packaged_result": "passed",
+    "github_ci": "not rerun; local changes not pushed"
   }
 }

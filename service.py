@@ -13,7 +13,8 @@ import tempfile
 import threading
 import time
 import urllib.parse
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from local_http import LocalHTTPServer
 
 import bridge
 from context_store import ContextConflict
@@ -365,7 +366,7 @@ def serve(home, port=8765, console=True):
 
         server = None
         try:
-            server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+            server = LocalHTTPServer(('127.0.0.1', port), Handler)
             server.daemon_threads = True
             # Recover persisted queues without requiring another API call after login.
             for project in service.projects():

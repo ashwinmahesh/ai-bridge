@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import ai_bridge
 import bridge
 import service
+from local_http import local_opener
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -68,7 +69,7 @@ class ServiceTests(unittest.TestCase):
         headers = {'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json', **(headers or {})}
         req = urllib.request.Request(f'http://127.0.0.1:{self.port}{path}', method=verb, headers=headers, data=json.dumps(data).encode() if data is not None else None)
         try:
-            with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=10) as response:
+            with local_opener().open(req, timeout=10) as response:
                 raw = response.read()
                 return json.loads(raw) if raw else None
         except urllib.error.HTTPError as exc:
@@ -137,7 +138,7 @@ class ServiceTests(unittest.TestCase):
             self.api('GET', path)
         self.assertEqual(error.exception.code, 405)
         req = urllib.request.Request(f'http://127.0.0.1:{self.port}/v1/events', headers={'Authorization': 'Bearer ' + self.token})
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with local_opener().open(req, timeout=5) as response:
             self.assertEqual(response.headers['Content-Type'], 'text/event-stream')
             self.assertEqual(response.readline().strip(), b': connected')
             response.readline()

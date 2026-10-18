@@ -12,6 +12,10 @@ import time
 
 import bridge
 
+START_TIMEOUT = 60
+STOP_TIMEOUT = 15
+HEALTH_TIMEOUT = 1
+
 
 def locked(home):
     with (home / 'daemon.lock').open('a') as handle:
@@ -22,15 +26,15 @@ def locked(home):
         return False
 
 
-def status(home, cfg):
-    value = bridge.request(home, cfg, '/health')
+def status(home, cfg, timeout=HEALTH_TIMEOUT):
+    value = bridge.request(home, cfg, '/health', timeout=timeout)
     pidfile = home / 'daemon.pid'
     if not pidfile.exists() or int(pidfile.read_text()) != value.get('pid'):
         raise ValueError('Port is occupied by another bridge; check state directory and port')
     return value
 
 
-def start(home, cfg):
+def start(home, cfg, timeout=START_TIMEOUT):
     if locked(home):
         info = status(home, cfg)
         print(f'Already running (PID {info["pid"]})')
@@ -41,17 +45,19 @@ def start(home, cfg):
         os.chmod(output, 0o600)
         proc = subprocess.Popen([sys.executable, str(Path(bridge.__file__).resolve()), '--home', str(home), '--log-file-only', 'serve'],
                                 stdin=subprocess.DEVNULL, stdout=console, stderr=console, start_new_session=True)
-    for _ in range(600):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         if proc.poll() is not None:
             raise ValueError(f'Daemon exited with code {proc.returncode}; see {output}')
         try:
-            info = status(home, cfg)
+            remaining = max(.01, deadline - time.monotonic())
+            info = status(home, cfg, timeout=min(HEALTH_TIMEOUT, remaining))
             if info['pid'] == proc.pid:
                 print(f'Running in background (PID {proc.pid}); logs: {home / "operations.jsonl"}')
                 return
         except (OSError, ValueError):
             pass
-        time.sleep(.1)
+        time.sleep(min(.1, max(0, deadline - time.monotonic())))
     proc.terminate()
     try:
         proc.wait(timeout=10)
@@ -68,7 +74,8 @@ def stop(home, cfg):
     # Authenticate the live daemon and match its PID file before signaling it.
     info = status(home, cfg)
     os.kill(info['pid'], signal.SIGTERM)
-    for _ in range(150):
+    deadline = time.monotonic() + STOP_TIMEOUT
+    while time.monotonic() < deadline:
         if not locked(home):
             print('Stopped')
             return

@@ -212,6 +212,8 @@ make restart PROJECT=my-app                       # background
 
 `make foreground` aliases `make run`; `make background` aliases `make start`. All default to `PROJECT=ai-bridge`. `make start` is idempotent. Background mode survives terminal closure but does not install a login service.
 
+Background startup waits up to 60 seconds for authenticated readiness, using probes capped at one second; a failed start terminates the spawned daemon and reports `console.log`. Local HTTP startup does not perform reverse DNS, proxy discovery, or HTTPS trust-store initialization. This avoids unrelated network configuration delaying a loopback-only service.
+
 ## Optional model and effort per message
 
 Either setting can be omitted independently. Set them on `send`:
