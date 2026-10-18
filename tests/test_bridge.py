@@ -238,7 +238,7 @@ print(json.dumps(reply))
             cfg['agents'][name] = {'command': [sys.executable, str(fake), name], 'format': 'text'}
         (self.home / 'config.json').write_text(json.dumps(cfg))
         self.cfg = cfg
-        self.proc = subprocess.Popen([sys.executable, bridge.__file__, '--home', str(self.home), 'serve'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.proc = subprocess.Popen([sys.executable, bridge.__file__, '--home', str(self.home), '--log-file-only', 'serve'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         for _ in range(100):
             try:
                 bridge.request(self.home, cfg, '/health')
@@ -307,7 +307,7 @@ print(json.dumps(reply))
             {'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'bridge_context_read','arguments':{'path':'brief.md'}}},
             {'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'bridge_context_write','arguments':{'path':'brief.md','content':'updated context','expected_version':1}}},
             {'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'bridge_context_list','arguments':{}}},
-            {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'bridge_send','arguments':{'to':'claude','body':'read brief','context_files':['brief.md']}}},
+            {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'bridge_send','arguments':{'to':'claude','body':'read brief','context_files':['brief.md'],'model':'mcp-test-model','effort':'high'}}},
         ]
         result = subprocess.run([sys.executable, bridge.__file__, '--home', str(self.home), 'mcp', '--identity', 'gemini'], input=''.join(json.dumps(call)+'\n' for call in calls), text=True, capture_output=True, timeout=10)
         replies = [json.loads(line)['result'] for line in result.stdout.splitlines()]
@@ -318,7 +318,10 @@ print(json.dumps(reply))
         self.assertEqual(written['version'], 2)
         self.assertEqual(written['writer'], 'gemini')
         self.assertEqual(self.store_context_read()['content'], 'updated context')
-        self.assertEqual(bridge.request(self.home, self.cfg, '/messages')[-1]['context_files'], ['brief.md'])
+        latest = bridge.request(self.home, self.cfg, '/messages')[-1]
+        self.assertEqual(latest['context_files'], ['brief.md'])
+        self.assertEqual(latest['model'], 'mcp-test-model')
+        self.assertEqual(latest['effort'], 'high')
 
     def store_context_read(self):
         return bridge.request(self.home, self.cfg, '/context/file?path=brief.md')
