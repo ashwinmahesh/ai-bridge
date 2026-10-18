@@ -64,3 +64,15 @@ install-service:
 .PHONY: package
 package:
 	$(PYTHON) scripts/package.py
+
+# Maintainer-only macOS release workflow. Credentials stay in the Keychain.
+DMG ?= dist/signed/ai-bridge-macos-$(shell uname -m).dmg
+.PHONY: signed-build notarize verify-release
+signed-build:
+	BUILD_PYTHON="$(BUILD_PYTHON)" $(PYTHON) scripts/mac_release.py build
+
+notarize:
+	NOTARY_PROFILE="$(NOTARY_PROFILE)" $(PYTHON) scripts/mac_release.py notarize --dmg "$(DMG)"
+
+verify-release:
+	$(PYTHON) scripts/mac_release.py validate --dmg "$(DMG)"

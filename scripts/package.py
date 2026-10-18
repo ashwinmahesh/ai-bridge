@@ -9,7 +9,7 @@ binary = root / 'dist/ai-bridge'
 if not binary.is_file():
     raise SystemExit('Run make build first')
 archive = root / 'dist' / f'ai-bridge-{platform.system().lower()}-{platform.machine()}.zip'
-files = [binary, *(root / name for name in ('README.md', 'API.md', 'SKILL.md'))]
+files = [binary, *(root / name for name in ('README.md', 'API.md', 'SKILL.md', 'MACOS_RELEASE.md'))]
 files.extend(path for path in (root / 'skills').rglob('*') if path.is_file())
 with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as bundle:
     for path in files:

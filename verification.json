@@ -2,8 +2,8 @@
   "implementation": "Python standard library + SQLite",
   "project_directory": "<local checkout>",
   "project": "ai-bridge",
-  "automated_tests": 37,
-  "automated_result": "passed (36 passed, 1 packaged-only test skipped in source suite)",
+  "automated_tests": 43,
+  "automated_result": "passed (42 passed, 1 packaged-only test skipped in source suite)",
   "live_e2e": {
     "passed": true,
     "results": [
@@ -51,7 +51,7 @@
     "targeted_context_tests": 8,
     "result": "passed"
   },
-  "automated_tests_note": "Full source suite plus six packaged integration tests passed; no new live model requests were made.",
+  "automated_tests_note": "Source regression suite and six actual Developer ID-signed binary tests passed. Six release-workflow tests use mocked Apple tools, never credentials.",
   "model_effort_selection": {
     "per_message": true,
     "mcp": true,
@@ -76,5 +76,17 @@
     "sha256": "ee6f37dccde87bb6ac21d004511e9ab4b7b09ccd852526b0d0c20b90f34dc163",
     "real_user_service": "untouched",
     "developer_id_notarization": false
+  },
+  "macos_release": {
+    "developer_id_signature": "verified",
+    "secure_timestamp": true,
+    "hardened_runtime": true,
+    "signed_binary_tests": 6,
+    "signed_binary_result": "passed",
+    "signed_dmg_signature": "verified",
+    "architecture": "arm64",
+    "notarization": "pending Keychain profile setup",
+    "stapled": false,
+    "binary_sha256": "f4639e62bad561ae76530f84c0fffe22a313580204560f2133df0af7ec1e1169"
   }
 }

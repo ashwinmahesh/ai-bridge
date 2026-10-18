@@ -10,7 +10,7 @@ Download the binary archive for their Mac's architecture, extract it, and run `.
 
 State and credentials are created locally for each user. The packaged archive includes only the binary, documentation and skill, never `.bridge`, provider credentials, tokens, transcripts or the developer's detected executable paths. The default service home follows the current user and OS; `--home` and `--port` can override it. Source Makefile service targets use the same OS-specific default.
 
-Current distribution limits: macOS login startup only; a native build is needed for each architecture; Windows is unsupported. Downloaded macOS builds are not Developer ID signed or notarized, so frictionless public installation still requires maintainer signing/notarization. The repository's legacy stdio MCP files are explicitly editable templates, not personal configuration. The binary uses HTTP MCP and does not depend on those Python templates.
+Current distribution limits: macOS login startup only; a native build is needed for each architecture; Windows is unsupported. Ordinary CI artifacts are ad-hoc signed. For public distribution, maintainers can create a Developer ID-signed and notarized DMG using [MACOS_RELEASE.md](MACOS_RELEASE.md). The repository's legacy stdio MCP files are explicitly editable templates, not personal configuration. The binary uses HTTP MCP and does not depend on those Python templates.
 
 ## Install a binary on macOS
 
@@ -58,7 +58,7 @@ These CLI commands administer installation/lifecycle. All project, message, cont
 
 launchd restarts crashes with a throttle; clean API shutdown remains stopped until next login or an explicit kickstart. Launch output is in `console.log`; structured operation metadata rotates in `operations.jsonl`. Foreground logs also stream to stderr. Native CLI executable paths are discovered during initial setup; update them through the provider API if login PATH differs. CLI presence does not prove sign-in. The packaged launcher removes common API-key environment overrides; verify native CLI configuration for subscription-only usage.
 
-The build is ad-hoc signed by PyInstaller, without a Developer ID/notarization identity. For broad download distribution, the maintainer must configure Apple Developer ID signing/notarization; CI currently uploads build artifacts, not a notarized installer. Python bytecode is bundled and can be extracted; distributing without a checkout does not provide source secrecy. The one-file executable extracts its embedded runtime into a temporary directory at launch.
+The default build is ad-hoc signed by PyInstaller. The optional `make signed-build`, `make notarize NOTARY_PROFILE=NAME`, and `make verify-release` workflow creates and verifies a Developer ID-signed, notarized DMG; see [MACOS_RELEASE.md](MACOS_RELEASE.md) for Keychain setup and release instructions. CI currently uploads test build artifacts, not notarized releases. Python bytecode is bundled and can be extracted; distributing without a checkout does not provide source secrecy. The one-file executable extracts its embedded runtime into a temporary directory at launch.
 
 ## Build and verify
 
