@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 local.ai-bridge.plist
+.DS_Store
+.venv-build/
+build/
+dist/
+*.spec

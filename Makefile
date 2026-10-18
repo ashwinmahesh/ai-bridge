@@ -44,3 +44,23 @@ logs: init
 
 test:
 	$(PYTHON) -m unittest discover -s tests -v
+
+# Multi-project HTTP service. Legacy per-project targets above remain compatible.
+SERVICE_HOME ?= $(HOME)/Library/Application Support/AI Bridge
+SERVICE_PORT ?= 8765
+BUILD_PYTHON ?= .venv-build/bin/python
+.PHONY: api build install-service
+api:
+	$(PYTHON) ai_bridge.py --home "$(SERVICE_HOME)" --port "$(SERVICE_PORT)" serve
+
+build:
+	$(PYTHON) -m venv .venv-build
+	$(BUILD_PYTHON) -m pip install -r requirements-build.txt
+	$(BUILD_PYTHON) -m PyInstaller --noconfirm --clean --onefile --name ai-bridge ai_bridge.py
+
+install-service:
+	dist/ai-bridge --home "$(SERVICE_HOME)" --port "$(SERVICE_PORT)" install-service
+
+.PHONY: package
+package:
+	$(PYTHON) scripts/package.py

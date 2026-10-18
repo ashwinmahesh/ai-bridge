@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ai-bridge": {
+      "type": "http",
+      "url": "http://127.0.0.1:8765/v1/projects/PROJECT_ID/mcp?identity=chatgpt",
+      "headers": {"Authorization": "Bearer REPLACE_FROM_LOCAL_TOKEN_FILE"}
+    }
+  }
+}

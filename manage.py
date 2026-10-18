@@ -39,7 +39,7 @@ def start(home, cfg):
     # Only startup/shutdown diagnostics go here; operation logs rotate separately.
     with output.open('ab', buffering=0) as console:
         os.chmod(output, 0o600)
-        proc = subprocess.Popen([sys.executable, str(Path(bridge.__file__).resolve()), '--home', str(home), 'serve'],
+        proc = subprocess.Popen([sys.executable, str(Path(bridge.__file__).resolve()), '--home', str(home), '--log-file-only', 'serve'],
                                 stdin=subprocess.DEVNULL, stdout=console, stderr=console, start_new_session=True)
     for _ in range(600):
         if proc.poll() is not None:

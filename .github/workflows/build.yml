@@ -1,0 +1,24 @@
+name: Test and build standalone service
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - run: python -m unittest discover -s tests -v
+      - run: make build
+      - run: AI_BRIDGE_TEST_BINARY="$PWD/dist/ai-bridge" python tests/test_service.py -v
+      - run: make package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-bridge-macos
+          path: dist/ai-bridge-darwin-*.zip

@@ -2,8 +2,8 @@
   "implementation": "Python standard library + SQLite",
   "project_directory": "/Users/ashwinmahesh/Documents/ai-bridge",
   "project": "ai-bridge",
-  "automated_tests": 23,
-  "automated_result": "passed",
+  "automated_tests": 37,
+  "automated_result": "passed (36 passed, 1 packaged-only test skipped in source suite)",
   "live_e2e": {
     "passed": true,
     "results": [
@@ -31,7 +31,7 @@
       "CLAUDE_E2E_OK_bd404e1e6171"
     ]
   },
-  "skill": "~/.codex/skills/ai-bridge",
+  "skill": "repository SKILL.md and installable skills/ai-bridge; installed user skill unchanged",
   "skill_validation": "passed",
   "live_context_e2e": {
     "passed": true,
@@ -44,12 +44,37 @@
     "gemini_message_id": "fe469366-2057-4187-be3f-87d28b8ea6d0",
     "claude_message_id": "6beb3dbb-f57e-4a26-ab50-a61cfe9bea28"
   },
-  "service_mode": "stopped at user request",
+  "service_mode": "user-managed; process not stopped, started, or restarted by this update",
   "scaffold": {
     "implemented": true,
     "preserves_existing_documents": true,
     "targeted_context_tests": 8,
     "result": "passed"
   },
-  "automated_tests_note": "23 full-suite tests passed before scaffold addition; eight context tests rerun after scaffold addition."
+  "automated_tests_note": "Full source suite plus six packaged integration tests passed; no new live model requests were made.",
+  "model_effort_selection": {
+    "per_message": true,
+    "mcp": true,
+    "profile_agent_defaults": true,
+    "native_flag_mapping": "tested",
+    "legacy_server_guard": "tested"
+  },
+  "foreground_logging": {
+    "stderr_stream": true,
+    "rotating_jsonl": true,
+    "background_file_only": true,
+    "capture_test": "passed"
+  },
+  "packaged_service": {
+    "version": "2.0.0",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "packaged_tests": 6,
+    "result": "passed",
+    "python_absent_from_path": true,
+    "isolated_real_binary_install": "passed; no launch agent activated",
+    "sha256": "ee6f37dccde87bb6ac21d004511e9ab4b7b09ccd852526b0d0c20b90f34dc163",
+    "real_user_service": "untouched",
+    "developer_id_notarization": false
+  }
 }
